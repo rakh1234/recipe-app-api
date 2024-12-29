@@ -25,7 +25,7 @@ jobs:
           sudo apt-get install -y docker-compose
 
       - name: Run Tests
-        run: docker-compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
+        run: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
 
       - name: Lint Code
-        run: docker-compose run --rm app sh -c "flake8"
+        run: docker compose run --rm app sh -c "flake8"
