@@ -10,9 +10,6 @@ COPY ./app /app
 WORKDIR /app
 EXPOSE 8000
 
-COPY wait_for_db.sh /wait_for_db.sh
-RUN chmod +x /wait_for_db.sh
-
 ARG DEV=false
 RUN python -m venv /py && \
     /py/bin/pip install --upgrade pip && \
