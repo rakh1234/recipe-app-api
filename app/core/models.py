@@ -7,6 +7,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from django.conf import settings
 
 class UserManager(BaseUserManager):
     """Manager for users."""
@@ -42,3 +43,19 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     #field used for auth
     USERNAME_FIELD = 'email'
+
+
+class Recipe(models.Model): #(models.Model) is the base class "basic model"
+    """Recipe object."""
+    user = models.ForeignKey( #the user that the recipe belongs to
+        settings.AUTH_USER_MODEL, #we use AUTH_USER_MODEL beacause of we modify user model it'll change auto here
+        on_delete=models.CASCADE, #in case user acc deleted, the recipes of this user will be deleted too
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    time_minutes = models.IntegerField()
+    price = models.DecimalField(max_digits=5, decimal_places=2)
+    link = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.title

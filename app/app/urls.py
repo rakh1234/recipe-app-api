@@ -32,4 +32,5 @@ urlpatterns = [
      #this is MVP endpoint= For a user authentication and focus on core functionality
      #it named MVP if it become /api/user/me/ <-- "me" is from app\user\urls.py
     path('api/user/', include('user.urls')),
+    path('api/recipe/', include('recipe.urls')),
 ]
