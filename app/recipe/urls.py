@@ -13,6 +13,7 @@ from recipe import views
 
 router = DefaultRouter()
 router.register('recipes', views.RecipeViewSet) #create new endpoint API "it means RecipeViewSet will auto generate URLs"
+router.register('tags', views.TagViewSet)
 
 app_name = 'recipe'
 
