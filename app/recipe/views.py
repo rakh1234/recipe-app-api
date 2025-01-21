@@ -1,6 +1,13 @@
 """
 Views for the recipe APIs
 """
+
+from drf_spectacular.utils import (
+    extend_schema_view,
+    extend_schema,
+    OpenApiParameter,
+    OpenApiTypes,
+)
 from rest_framework import (
     viewsets,
     mixins,
@@ -18,6 +25,25 @@ from core.models import (
 )
 from recipe import serializers
 
+#custom schema extension
+@extend_schema_view( #for doc changes "where it'll modify the swagger to have 2 fields (tags & ingredients) as filter inside GET recipes"
+    list=extend_schema( #to get a list of intgers
+        parameters=[
+            OpenApiParameter(
+                'tags',
+                OpenApiTypes.STR,
+                description='Comma separated list of tag IDs to filter',
+            ),
+            OpenApiParameter(
+                'ingredients', #to filter recipes by specific ingredient
+                OpenApiTypes.STR,
+                description='Comma separated list of ingredient IDs to filter',
+            ),
+        ]
+    )
+)
+
+
 #there is many types of viewsets and we chose ModelViewSet beacause we'll use a lot of existing logic "read, create,..." provided by serializer
 class RecipeViewSet(viewsets.ModelViewSet):
     """View for manage recipe APIs."""
@@ -26,9 +52,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated] #to make sure that only auth users "logged in users" can use recipe
 
+    def _params_to_ints(self, qs):
+        """Convert a list of strings to integers."""
+        return [int(str_id) for str_id in qs.split(',')]
+    
     def get_queryset(self):
         """Retrieve recipes for authenticated user only."""
-        return self.queryset.filter(user=self.request.user).order_by('-id')
+        tags = self.request.query_params.get('tags')
+        ingredients = self.request.query_params.get('ingredients')
+        queryset = self.queryset
+        if tags:
+            tag_ids = self._params_to_ints(tags)
+            queryset = queryset.filter(tags__id__in=tag_ids)
+        if ingredients:
+            ingredient_ids = self._params_to_ints(ingredients)
+            queryset = queryset.filter(ingredients__id__in=ingredient_ids) #double underscore= Filter queryset to include only "ingredients" obj who have an "id" in "ingredient_ids"
+
+        return queryset.filter(
+            user=self.request.user
+        ).order_by('-id').distinct() #distinct= only get unique values , -id= sort in reverse order
     
     def get_serializer_class(self):
         """Return the serializer class for request."""
@@ -54,7 +96,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
+ 
+@extend_schema_view(
+    list=extend_schema(
+        parameters=[
+            OpenApiParameter(
+                'assigned_only', #assigned_only= if it's 1 the URL will apply the filter, if it's not then there is no filter 
+                OpenApiTypes.INT, enum=[0, 1],
+                description='Filter by items assigned to recipes.',
+            ),
+        ]
+    )
+)   
+
 
 #refactored Base view class
 class BaseRecipeAttrViewSet(mixins.DestroyModelMixin, mixins.UpdateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet): #the parameter here are inherited base classes
@@ -66,7 +121,16 @@ class BaseRecipeAttrViewSet(mixins.DestroyModelMixin, mixins.UpdateModelMixin, m
 
     def get_queryset(self):
         """Filter queryset to authenticated user."""
-        return self.queryset.filter(user=self.request.user).order_by('-name') #each user can manage their own Ingredient
+        assigned_only = bool(
+            int(self.request.query_params.get('assigned_only', 0)) 
+        )
+        queryset = self.queryset
+        if assigned_only:
+            queryset = queryset.filter(recipe__isnull=False)
+
+        return queryset.filter(
+            user=self.request.user
+        ).order_by('-name').distinct()
 
 
 #refactored view class
